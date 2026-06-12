@@ -19,8 +19,8 @@ const extractText = (children: React.ReactNode): string => {
   if (typeof children === "string") return children;
   if (typeof children === "number") return String(children);
   if (Array.isArray(children)) return children.map(extractText).join("");
-  if (React.isValidElement(children) && children.props && children.props.children) {
-    return extractText(children.props.children);
+  if (React.isValidElement(children) && children.props && (children.props as any).children) {
+    return extractText((children.props as any).children);
   }
   return "";
 };
@@ -143,7 +143,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
             // 2. Detect Business Heading Paragraph (Details UI)
             const pChildren = React.Children.toArray(children);
-            if (pChildren.length === 1 && React.isValidElement(pChildren[0]) && pChildren[0].props?.node?.tagName === 'strong') {
+            if (pChildren.length === 1 && React.isValidElement(pChildren[0]) && (pChildren[0].props as any)?.node?.tagName === 'strong') {
                const name = extractText(pChildren[0]).trim();
                const nameLower = name.toLowerCase();
                const isLabel = name.endsWith(':') || 
@@ -213,10 +213,10 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             
             // Detect if this list item is a Business Listing
             const newChildren = React.Children.map(children, (child, childIndex) => {
-              if (React.isValidElement(child) && child.props?.node?.tagName === 'p') {
-                 const pChildren = React.Children.toArray(child.props.children);
+              if (React.isValidElement(child) && (child.props as any)?.node?.tagName === 'p') {
+                 const pChildren = React.Children.toArray((child.props as any).children);
                  const newPChildren = pChildren.map((pChild, index) => {
-                    if (index === 0 && React.isValidElement(pChild) && pChild.props?.node?.tagName === 'strong') {
+                    if (index === 0 && React.isValidElement(pChild) && (pChild.props as any)?.node?.tagName === 'strong') {
                        const name = extractText(pChild).trim();
                        const nameLower = name.toLowerCase();
                        const isLabel = name.endsWith(':') || 
@@ -245,7 +245,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               }
               // If it's a direct string or strong without a 'p' tag wrapper
               // Only check the first few children to avoid matching bold words in the middle of a sentence
-              if (!isBusiness && childIndex <= 1 && React.isValidElement(child) && child.props?.node?.tagName === 'strong') {
+              if (!isBusiness && childIndex <= 1 && React.isValidElement(child) && (child.props as any)?.node?.tagName === 'strong') {
                   const name = extractText(child).trim();
                   const nameLower = name.toLowerCase();
                   const isLabel = name.endsWith(':') || 
