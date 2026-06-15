@@ -149,7 +149,7 @@ export async function streamChat({
             for (let i = 0; i < chars.length; i += 2) {
               onToken(chars.slice(i, i + 2).join(""));
               // 15ms per 2 chars = ~133 chars per second (smooth reading speed)
-              await new Promise((r) => setTimeout(r, 5));
+              await new Promise((r) => setTimeout(r, 2));
             }
             break;
           }
