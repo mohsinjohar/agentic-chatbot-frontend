@@ -97,10 +97,10 @@ export function useChat(sessionId: string): UseChatReturn {
           },
 
           onFinal: () => {
-            // Mark streaming as complete
+            // Mark streaming as complete and record completion time
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, isStreaming: false } : m
+                m.id === assistantId ? { ...m, isStreaming: false, completedAt: Date.now() } : m
               )
             );
             setIsStreaming(false);
@@ -110,7 +110,7 @@ export function useChat(sessionId: string): UseChatReturn {
             const errorMessage =
               "message" in err ? err.message : "Something went wrong.";
 
-            // Update assistant message with error content
+            // Update assistant message with error content and completion time
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
@@ -118,6 +118,7 @@ export function useChat(sessionId: string): UseChatReturn {
                       ...m,
                       content: errorMessage,
                       isStreaming: false,
+                      completedAt: Date.now(),
                     }
                   : m
               )
