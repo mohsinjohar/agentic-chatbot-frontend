@@ -46,13 +46,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <span className="whitespace-pre-wrap break-words">{message.content}</span>
         ) : (
           <div className="flex flex-col">
-            {!message.isStreaming && message.completedAt && (
+            {(message.firstTokenAt || (!message.isStreaming && message.completedAt)) && (
               <div className="mb-2 text-xs text-[var(--color-gray-500)] flex items-center gap-1 select-none">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"></circle>
                   <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
-                Thought for {Math.max(1, Math.round((message.completedAt - message.timestamp) / 1000))} seconds
+                Thought for {Math.max(1, Math.round(((message.firstTokenAt || message.completedAt!) - message.timestamp) / 1000))} seconds
               </div>
             )}
             <MarkdownRenderer content={message.content} />

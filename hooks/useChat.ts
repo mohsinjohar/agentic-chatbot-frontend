@@ -86,11 +86,15 @@ export function useChat(sessionId: string): UseChatReturn {
           signal: controller.signal,
 
           onToken: (tokenText) => {
-            // Append token to the assistant message
+            // Append token to the assistant message, and set firstTokenAt if not already set
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
-                  ? { ...m, content: m.content + tokenText }
+                  ? {
+                      ...m,
+                      content: m.content + tokenText,
+                      ...(m.firstTokenAt ? {} : { firstTokenAt: Date.now() }),
+                    }
                   : m
               )
             );

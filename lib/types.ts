@@ -16,6 +16,8 @@ export interface Message {
   content: string;
   /** Unix timestamp (ms) when message was created */
   timestamp: number;
+  /** Unix timestamp (ms) when the first token was received (Thinking time) */
+  firstTokenAt?: number;
   /** Unix timestamp (ms) when assistant finished streaming the response */
   completedAt?: number;
   /** True while the assistant response is still streaming in */
