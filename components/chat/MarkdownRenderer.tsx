@@ -114,7 +114,7 @@ interface MarkdownRendererProps {
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
-    <div className="markdown-body text-[15px] leading-[1.8] text-gray-800 text-justify">
+    <div className="markdown-body text-[15px] leading-[1.8] text-gray-800 text-left md:text-justify break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
