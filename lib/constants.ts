@@ -6,7 +6,7 @@
 // ── API Configuration ──────────────────────────────────────
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL || "https://backend.karobaronline.ai";
 
 export const CHAT_STREAM_ENDPOINT = `${API_BASE_URL}/v1/chat/stream`;
 
