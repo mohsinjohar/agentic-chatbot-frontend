@@ -55,7 +55,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 Thought for {Math.max(1, Math.round(((message.firstTokenAt || message.completedAt!) - message.timestamp) / 1000))} seconds
               </div>
             )}
-            <MarkdownRenderer content={message.content} />
+            <MarkdownRenderer content={message.content} businesses={message.businesses} />
             {message.isStreaming && (
               <span className="animate-pulse ml-1 inline-block w-2 h-4 bg-[var(--color-primary)] rounded-sm mt-1" />
             )}

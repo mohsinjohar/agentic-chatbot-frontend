@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════
+1/* ═══════════════════════════════════════════════════════════
    Karobar Online — Type Definitions
    Central type registry. Every data shape lives here.
    ═══════════════════════════════════════════════════════════ */
@@ -22,6 +22,8 @@ export interface Message {
   completedAt?: number;
   /** True while the assistant response is still streaming in */
   isStreaming?: boolean;
+  /** Array of businesses returned from the backend (if any) */
+  businesses?: any[];
 }
 
 // ── Chat Sessions (Sidebar "Recent Search") ────────────────
@@ -55,6 +57,7 @@ export interface SSEFinalEvent {
   request_id: string;
   done: boolean;
   answer: string;
+  businesses?: any[];
 }
 
 export interface SSEErrorEvent {

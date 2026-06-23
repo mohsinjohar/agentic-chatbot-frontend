@@ -100,11 +100,20 @@ export function useChat(sessionId: string): UseChatReturn {
             );
           },
 
-          onFinal: () => {
+          onBusinesses: (businesses) => {
+            // Attach businesses to the message as soon as they are available (during streaming)
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, businesses } : m
+              )
+            );
+          },
+
+          onFinal: (answer, businesses) => {
             // Mark streaming as complete and record completion time
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, isStreaming: false, completedAt: Date.now() } : m
+                m.id === assistantId ? { ...m, isStreaming: false, completedAt: Date.now(), businesses } : m
               )
             );
             setIsStreaming(false);

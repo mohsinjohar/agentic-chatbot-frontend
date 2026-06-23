@@ -17,8 +17,10 @@ interface StreamChatParams {
   message: string;
   /** Called for each streamed token chunk */
   onToken: (text: string) => void;
+  /** Called as soon as businesses data is available (before final) */
+  onBusinesses?: (businesses: any[]) => void;
   /** Called when the response is fully complete */
-  onFinal: (answer: string) => void;
+  onFinal: (answer: string, businesses?: any[]) => void;
   /** Called on any error (network or backend) */
   onError: (error: SSEErrorEvent | { message: string }) => void;
   /** AbortSignal to cancel the request mid-stream */
@@ -79,6 +81,7 @@ export async function streamChat({
   sessionId,
   message,
   onToken,
+  onBusinesses,
   onFinal,
   onError,
   signal,
@@ -153,9 +156,15 @@ export async function streamChat({
             }
             break;
           }
+          case "businesses": {
+            if (onBusinesses && data && (data as any).businesses) {
+              onBusinesses((data as any).businesses);
+            }
+            break;
+          }
           case "final": {
             const finalData = data as SSEFinalEvent;
-            onFinal(finalData.answer);
+            onFinal(finalData.answer, finalData.businesses);
             break;
           }
           case "error": {
