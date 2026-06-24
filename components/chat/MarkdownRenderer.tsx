@@ -11,6 +11,7 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import { Phone, Mail, MapPin, Globe, MessageCircle, Store } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -61,6 +62,40 @@ function findBusiness(name: string, businesses?: any[]) {
     }
   }
   return null;
+}
+
+function isLikelyBusiness(name: string, businesses?: any[]): boolean {
+  if (findBusiness(name, businesses)) return true;
+
+  const nameLower = name.toLowerCase();
+  const isLabel = name.endsWith(':') || 
+                  nameLower.includes('phone') || 
+                  nameLower.includes('email') || 
+                  nameLower.includes('address') || 
+                  nameLower.includes('customer') || 
+                  nameLower.includes('saying') || 
+                  nameLower.includes('review') || 
+                  nameLower.includes('description');
+  if (isLabel || name.length < 2 || name.length > 50) return false;
+
+  const cleanName = name.replace(/^[0-9]+[\.\)]\s+/, '').trim();
+  const hasNumberPrefix = /^[0-9]+[\.\)]\s+/.test(name);
+  
+  const words = cleanName.split(/\s+/).filter(w => /[a-zA-Z0-9]/.test(w));
+  if (words.length === 0 || words.length > 6) return false;
+
+  let titleCaseCount = 0;
+  for (const w of words) {
+    if (/^[A-Z]/.test(w)) titleCaseCount++;
+  }
+  const isMostlyTitleCase = titleCaseCount / words.length >= 0.5;
+
+  if (hasNumberPrefix && isMostlyTitleCase) return true;
+
+  const bizKeywords = /\b(steel|engineering|fabrication|traders|enterprises|brothers|associates|group|company|co\.|ltd|inc|llc|services|tech|solutions|industries|store|shop|mart|motors|autos|clinic|hospital)\b/i;
+  if (isMostlyTitleCase && bizKeywords.test(cleanName)) return true;
+
+  return false;
 }
 
 const PROFILE_BASE_URL = 'https://karobaronline.ai/biz';
@@ -299,17 +334,7 @@ export function MarkdownRenderer({ content, businesses }: MarkdownRendererProps)
       const pChildren = React.Children.toArray(children);
       if (pChildren.length === 1 && React.isValidElement(pChildren[0]) && (pChildren[0].props as any)?.node?.tagName === 'strong') {
          const name = extractText(pChildren[0]).trim();
-         const nameLower = name.toLowerCase();
-         const isLabel = name.endsWith(':') || 
-                         name.includes('Phone') || 
-                         name.includes('Email') || 
-                         name.includes('Address') || 
-                         nameLower.includes('customer') || 
-                         nameLower.includes('saying') || 
-                         nameLower.includes('review') || 
-                         nameLower.includes('description') || 
-                         name.length > 60;
-         if (!isLabel && name.length > 2 && name.length < 50) {
+         if (isLikelyBusiness(name, businesses)) {
             return (
               <div className="flex flex-wrap items-center gap-2 mb-4">
                  <h3 className="text-[18px] font-bold text-gray-900 m-0">
@@ -372,17 +397,7 @@ export function MarkdownRenderer({ content, businesses }: MarkdownRendererProps)
            const newPChildren = pChildren.map((pChild, index) => {
               if (index === 0 && React.isValidElement(pChild) && (pChild.props as any)?.node?.tagName === 'strong') {
                  const name = extractText(pChild).trim();
-                 const nameLower = name.toLowerCase();
-                 const isLabel = name.endsWith(':') || 
-                                 name.includes('Phone') || 
-                                 name.includes('Email') || 
-                                 name.includes('Address') || 
-                                 nameLower.includes('customer') || 
-                                 nameLower.includes('saying') || 
-                                 nameLower.includes('review') || 
-                                 nameLower.includes('description') || 
-                                 name.length > 60;
-                 if (!isLabel && name.length > 2) {
+                 if (isLikelyBusiness(name, businesses)) {
                      isBusiness = true;
                      businessName = name;
                      return (
@@ -413,17 +428,7 @@ export function MarkdownRenderer({ content, businesses }: MarkdownRendererProps)
         // Only check the first few children to avoid matching bold words in the middle of a sentence
         if (!isBusiness && childIndex <= 1 && React.isValidElement(child) && (child.props as any)?.node?.tagName === 'strong') {
             const name = extractText(child).trim();
-            const nameLower = name.toLowerCase();
-            const isLabel = name.endsWith(':') || 
-                            name.includes('Phone') || 
-                            name.includes('Email') || 
-                            name.includes('Address') || 
-                            nameLower.includes('customer') || 
-                            nameLower.includes('saying') || 
-                            nameLower.includes('review') || 
-                            nameLower.includes('description') || 
-                            name.length > 60;
-            if (!isLabel && name.length > 2) {
+            if (isLikelyBusiness(name, businesses)) {
                 isBusiness = true;
                 businessName = name;
                 return (
@@ -496,17 +501,41 @@ export function MarkdownRenderer({ content, businesses }: MarkdownRendererProps)
 
     // ── Tables ──
     table: ({ children }: any) => (
-      <div className="my-6 w-full overflow-x-auto rounded-lg border border-gray-200">
-        <table className="w-full text-left border-collapse">
-          {children}
-        </table>
+      <div className="my-8 relative w-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
+        {/* Mobile scroll fade indicator */}
+        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none z-30 md:hidden"></div>
+        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+          <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full">
+            {children}
+          </table>
+        </div>
       </div>
     ),
-    thead: ({ children }: any) => <thead className="bg-gray-50 border-b border-gray-200">{children}</thead>,
-    tbody: ({ children }: any) => <tbody className="divide-y divide-gray-100">{children}</tbody>,
-    tr: ({ children }: any) => <tr>{children}</tr>,
-    th: ({ children }: any) => <th className="px-4 py-3 font-semibold text-gray-900 text-sm">{children}</th>,
-    td: ({ children }: any) => <td className="px-4 py-3 text-sm text-gray-700">{children}</td>,
+    thead: ({ children }: any) => (
+      <thead className="bg-[#f8fafc] border-b border-gray-200">
+        {children}
+      </thead>
+    ),
+    tbody: ({ children }: any) => (
+      <tbody className="divide-y divide-gray-100 bg-white">
+        {children}
+      </tbody>
+    ),
+    tr: ({ children }: any) => (
+      <tr className="hover:bg-[#f4fbf8] transition-colors duration-200 group divide-x divide-gray-50">
+        {children}
+      </tr>
+    ),
+    th: ({ children }: any) => (
+      <th className="px-5 py-4 font-semibold text-gray-900 text-[14px] leading-tight align-middle first:sticky first:left-0 first:z-20 first:bg-[#f8fafc] first:shadow-[1px_0_0_0_#e2e8f0] relative">
+        {children}
+      </th>
+    ),
+    td: ({ children }: any) => (
+      <td className="px-5 py-4 text-[14px] text-gray-700 leading-relaxed align-top first:sticky first:left-0 first:z-10 first:bg-white first:font-medium first:text-gray-900 group-hover:first:bg-[#f4fbf8] first:shadow-[1px_0_0_0_#e2e8f0] relative transition-colors duration-200">
+        {children}
+      </td>
+    ),
 
     // ── Dividers ──
     hr: () => (
@@ -561,6 +590,7 @@ export function MarkdownRenderer({ content, businesses }: MarkdownRendererProps)
     <div className="markdown-body text-[14px] leading-[1.8] text-gray-800 text-left md:text-justify break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
         components={components}
       >
         {content}
