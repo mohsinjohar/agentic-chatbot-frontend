@@ -400,19 +400,19 @@ function TableToCards({ children }: any) {
 
   try {
      if (thead && tbody) {
-        const theadChildren = React.Children.toArray((thead as React.ReactElement).props.children);
+        const theadChildren = React.Children.toArray((thead as any).props?.children);
         const theadTr = theadChildren.find((c: any) => c.type === 'tr' || c.props?.node?.tagName === 'tr');
         
         if (theadTr) {
-           const ths = React.Children.toArray((theadTr as React.ReactElement).props.children);
+           const ths = React.Children.toArray((theadTr as any).props?.children);
            headers = ths.map((th: any) => th.props?.children);
         }
 
-        const tbodyChildren = React.Children.toArray((tbody as React.ReactElement).props.children);
+        const tbodyChildren = React.Children.toArray((tbody as any).props?.children);
         const trs = tbodyChildren.filter((c: any) => c.type === 'tr' || c.props?.node?.tagName === 'tr');
         
         rowData = trs.map(tr => {
-           const tds = React.Children.toArray((tr as React.ReactElement).props.children);
+           const tds = React.Children.toArray((tr as any).props?.children);
            return tds.map((td: any) => td.props?.children);
         });
 
