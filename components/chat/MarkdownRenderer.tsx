@@ -297,6 +297,211 @@ function LinkIcon() {
   );
 }
 
+function cleanReactNodeLine(lineNodes: React.ReactNode[]) {
+   if (lineNodes.length > 0 && typeof lineNodes[0] === 'string') {
+      const firstStr = lineNodes[0] as string;
+      const match = /^[-•*]\s*/.exec(firstStr);
+      if (match) {
+         const newNodes = [...lineNodes];
+         newNodes[0] = firstStr.substring(match[0].length);
+         return newNodes;
+      }
+   }
+   return lineNodes;
+}
+
+function splitReactChildrenByBr(children: React.ReactNode) {
+  const childrenArray = React.Children.toArray(children);
+  const lines: React.ReactNode[][] = [];
+  let currentLine: React.ReactNode[] = [];
+  
+  for (const child of childrenArray) {
+    if (React.isValidElement(child) && child.type === 'br') {
+      if (currentLine.length > 0) lines.push(currentLine);
+      currentLine = [];
+    } else {
+      currentLine.push(child);
+    }
+  }
+  if (currentLine.length > 0) lines.push(currentLine);
+  return lines;
+}
+
+function renderAttributeValue(name: string, value: React.ReactNode) {
+  const lines = splitReactChildrenByBr(value);
+  const nameLower = extractText(name || '').toLowerCase();
+  const isContact = /\b(contact|info|details|reach)\b/.test(nameLower);
+  
+  if (lines.length > 1) {
+    if (isContact) {
+      return (
+        <div className="flex flex-col gap-2.5 mt-2">
+          {lines.map((line, idx) => {
+             const cleanedLine = cleanReactNodeLine(line);
+             const lineText = extractText(cleanedLine).trim().toLowerCase();
+             
+             let Icon = null;
+             if (/\b(phone|whatsapp|call|mobile|cell)\b/.test(lineText)) Icon = Phone;
+             else if (/\b(email|mail)\b/.test(lineText)) Icon = Mail;
+             else if (/\b(website|www|http|https|url)\b/.test(lineText)) Icon = Globe;
+             else if (/\b(address|location|street|road|block|plot|sector)\b/.test(lineText)) Icon = MapPin;
+             
+             return (
+               <div key={idx} className="flex items-start gap-3 bg-[#f8fafc] rounded-xl p-3 border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-colors duration-200 text-left group">
+                 {Icon ? (
+                    <div className="bg-white p-1.5 rounded-lg border border-gray-200 shadow-sm group-hover:border-emerald-200 transition-colors mt-0.5">
+                        <Icon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    </div>
+                 ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60 shrink-0 mt-3 ml-2"></div>
+                 )}
+                 <div className="text-[13.5px] text-gray-700 font-medium leading-[1.6] break-words flex-1 text-left mt-[3px]">
+                   {cleanedLine}
+                 </div>
+               </div>
+             );
+          })}
+        </div>
+      );
+    } else {
+      return (
+        <div className="flex flex-col gap-2.5 mt-1">
+          {lines.map((line, idx) => {
+             const cleanedLine = cleanReactNodeLine(line);
+             return (
+               <div key={idx} className="flex items-start gap-2.5 text-left">
+                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-2.5"></div>
+                 <div className="text-[14px] text-gray-700 leading-relaxed font-medium flex-1 text-left">
+                   {cleanedLine}
+                 </div>
+               </div>
+             );
+          })}
+        </div>
+      );
+    }
+  }
+
+  return (
+    <div className="text-[14px] text-gray-700 leading-relaxed font-medium text-left">
+      {cleanReactNodeLine(lines[0] || [value])}
+    </div>
+  );
+}
+
+function TableToCards({ children }: any) {
+  const childrenArray = React.Children.toArray(children);
+  const thead = childrenArray.find((c: any) => c.type === 'thead' || c.props?.node?.tagName === 'thead');
+  const tbody = childrenArray.find((c: any) => c.type === 'tbody' || c.props?.node?.tagName === 'tbody');
+  
+  let isParsed = false;
+  let headers: React.ReactNode[] = [];
+  let rowData: React.ReactNode[][] = [];
+
+  try {
+     if (thead && tbody) {
+        const theadChildren = React.Children.toArray((thead as React.ReactElement).props.children);
+        const theadTr = theadChildren.find((c: any) => c.type === 'tr' || c.props?.node?.tagName === 'tr');
+        
+        if (theadTr) {
+           const ths = React.Children.toArray((theadTr as React.ReactElement).props.children);
+           headers = ths.map((th: any) => th.props?.children);
+        }
+
+        const tbodyChildren = React.Children.toArray((tbody as React.ReactElement).props.children);
+        const trs = tbodyChildren.filter((c: any) => c.type === 'tr' || c.props?.node?.tagName === 'tr');
+        
+        rowData = trs.map(tr => {
+           const tds = React.Children.toArray((tr as React.ReactElement).props.children);
+           return tds.map((td: any) => td.props?.children);
+        });
+
+        if (headers.length > 0 && rowData.length > 0) {
+           isParsed = true;
+        }
+     }
+  } catch (e) {
+     console.error("Table parsing failed", e);
+  }
+
+  if (!isParsed) {
+    return (
+      <div className="my-8 w-full overflow-x-auto rounded-xl border border-gray-200">
+         <table className="w-full text-left border-collapse">{children}</table>
+      </div>
+    );
+  }
+
+  const firstHeaderLower = extractText(headers[0] || '').toLowerCase().trim();
+  const isFeatureFirstCol = firstHeaderLower.includes('feature') || 
+                            firstHeaderLower.includes('criteria') || 
+                            firstHeaderLower.includes('point') ||
+                            firstHeaderLower === '';
+                            
+  let entities: { title: React.ReactNode, attributes: { name: React.ReactNode, value: React.ReactNode }[] }[] = [];
+
+  if (isFeatureFirstCol) {
+     for (let j = 1; j < headers.length; j++) {
+        const title = headers[j];
+        const attributes = rowData.map(row => ({
+           name: row[0],
+           value: row[j]
+        }));
+        entities.push({ title, attributes });
+     }
+  } else {
+     for (let i = 0; i < rowData.length; i++) {
+        const title = rowData[i][0];
+        const attributes = headers.slice(1).map((h, j) => ({
+           name: h,
+           value: rowData[i][j+1]
+        }));
+        entities.push({ title, attributes });
+     }
+  }
+
+  const gridCols = entities.length === 1 ? 'grid-cols-1' : 
+                   entities.length === 2 ? 'grid-cols-1 lg:grid-cols-2' : 
+                   'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3';
+
+  return (
+    <div className={`my-8 w-full grid ${gridCols} gap-6 text-left`}>
+      {entities.map((entity, idx) => (
+         <div key={idx} className="flex flex-col bg-white border border-gray-200 rounded-2xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_20px_-6px_rgba(6,81,237,0.1)] transition-all duration-300 overflow-hidden relative">
+            {/* Top accent line */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-[var(--color-primary)]"></div>
+            
+            <div className="bg-white border-b border-gray-100/80 px-6 py-5">
+               <h3 className="font-bold text-gray-900 text-[18px] m-0 flex items-center gap-2.5">
+                  <Store className="w-[18px] h-[18px] text-emerald-600" />
+                  {entity.title}
+               </h3>
+            </div>
+            
+            <div className="flex flex-col p-6 gap-6">
+               {entity.attributes.map((attr, attrIdx) => {
+                  const valText = extractText(attr.value).trim();
+                  if (!valText || valText === '-' || valText.toLowerCase() === 'n/a') return null;
+
+                  return (
+                    <div key={attrIdx} className="flex flex-col gap-1.5">
+                       <span className="text-[11.5px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-3">
+                          {attr.name}
+                          <span className="flex-1 h-px bg-gray-100"></span>
+                       </span>
+                       <div className="mt-1">
+                          {renderAttributeValue(extractText(attr.name), attr.value)}
+                       </div>
+                    </div>
+                  );
+               })}
+            </div>
+         </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────
 
 interface MarkdownRendererProps {
@@ -500,17 +705,7 @@ export function MarkdownRenderer({ content, businesses }: MarkdownRendererProps)
     },
 
     // ── Tables ──
-    table: ({ children }: any) => (
-      <div className="my-8 relative w-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col">
-        {/* Mobile scroll fade indicator */}
-        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent pointer-events-none z-30 md:hidden"></div>
-        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-          <table className="w-full text-left border-collapse min-w-[600px] md:min-w-full">
-            {children}
-          </table>
-        </div>
-      </div>
-    ),
+    table: TableToCards,
     thead: ({ children }: any) => (
       <thead className="bg-[#f8fafc] border-b border-gray-200">
         {children}
