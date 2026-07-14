@@ -109,11 +109,34 @@ export function useChat(sessionId: string): UseChatReturn {
             );
           },
 
-          onFinal: (answer, businesses) => {
+          onPresentation: (presentation) => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      presentation,
+                      ...(m.firstTokenAt ? {} : { firstTokenAt: Date.now() }),
+                    }
+                  : m
+              )
+            );
+          },
+
+          onFinal: (answer, businesses, presentation) => {
             // Mark streaming as complete and record completion time
             setMessages((prev) =>
               prev.map((m) =>
-                m.id === assistantId ? { ...m, isStreaming: false, completedAt: Date.now(), businesses } : m
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: answer || m.content,
+                      isStreaming: false,
+                      completedAt: Date.now(),
+                      businesses,
+                      presentation: presentation ?? m.presentation,
+                    }
+                  : m
               )
             );
             setIsStreaming(false);
