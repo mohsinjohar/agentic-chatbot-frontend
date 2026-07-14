@@ -35,6 +35,7 @@ export interface BusinessPresentation {
   kind: "business_presentation";
   type: BusinessPresentationType;
   intro: string;
+  follow_up?: string;
   businesses: PresentedBusiness[];
 }
 

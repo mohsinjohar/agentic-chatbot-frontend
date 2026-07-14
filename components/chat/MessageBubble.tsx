@@ -89,6 +89,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                   />
                 )}
                 <BusinessPresentation presentation={message.presentation} />
+                {message.presentation.follow_up && (
+                  <div className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-primary)]">
+                    <StreamingText
+                      text={message.presentation.follow_up}
+                      animate={message.isStreaming}
+                    />
+                  </div>
+                )}
                 {closingContent && (
                     <div className="mt-3">
                       <MarkdownRenderer content={closingContent} />
