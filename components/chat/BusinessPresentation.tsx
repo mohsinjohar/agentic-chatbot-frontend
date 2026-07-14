@@ -84,11 +84,11 @@ function ProfileButton({ business }: { business: PresentedBusiness }) {
 
 function SearchResults({ businesses }: { businesses: PresentedBusiness[] }) {
   return (
-    <div className="my-4 overflow-hidden rounded-2xl border border-emerald-100/80 bg-gradient-to-br from-white to-emerald-50/40 shadow-[0_10px_35px_-25px_rgba(5,89,73,0.45)]">
+    <div className="my-4 flex flex-col gap-5 ml-2 sm:ml-4">
       {businesses.map((business, index) => (
         <article
           key={business.id}
-          className="px-5 py-5 sm:px-6 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-emerald-100/70"
+          className="flex flex-col"
         >
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h3 className="m-0 text-[17px] font-bold leading-6 text-gray-950">
@@ -103,7 +103,7 @@ function SearchResults({ businesses }: { businesses: PresentedBusiness[] }) {
             <Rating business={business} />
             <ProfileButton business={business} />
           </div>
-          <p className="mb-0 mt-3 max-w-4xl text-[14px] leading-7 text-gray-700">
+          <p className="mb-0 mt-3 max-w-4xl text-[14px] leading-7 text-gray-700 text-justify">
             {business.description}
           </p>
         </article>
