@@ -8,7 +8,15 @@
    ═══════════════════════════════════════════════════════════ */
 
 import { CHAT_STREAM_ENDPOINT } from "@/lib/constants";
-import type { SSEErrorEvent, SSEFinalEvent, SSETokenEvent } from "@/lib/types";
+import type {
+  BusinessPresentation,
+  PresentedBusiness,
+  SSEBusinessesEvent,
+  SSEErrorEvent,
+  SSEFinalEvent,
+  SSEPresentationEvent,
+  SSETokenEvent,
+} from "@/lib/types";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -18,9 +26,15 @@ interface StreamChatParams {
   /** Called for each streamed token chunk */
   onToken: (text: string) => void;
   /** Called as soon as businesses data is available (before final) */
-  onBusinesses?: (businesses: any[]) => void;
+  onBusinesses?: (businesses: PresentedBusiness[]) => void;
+  /** Called when validated intent-specific UI data is available */
+  onPresentation?: (presentation: BusinessPresentation) => void;
   /** Called when the response is fully complete */
-  onFinal: (answer: string, businesses?: any[]) => void;
+  onFinal: (
+    answer: string,
+    businesses?: PresentedBusiness[],
+    presentation?: BusinessPresentation | null,
+  ) => void;
   /** Called on any error (network or backend) */
   onError: (error: SSEErrorEvent | { message: string }) => void;
   /** AbortSignal to cancel the request mid-stream */
@@ -82,6 +96,7 @@ export async function streamChat({
   message,
   onToken,
   onBusinesses,
+  onPresentation,
   onFinal,
   onError,
   signal,
@@ -146,25 +161,30 @@ export async function streamChat({
         switch (event) {
           case "token": {
             const tokenData = data as SSETokenEvent;
-            // Artificial Typewriter Effect for smooth UI
-            // We split the chunk into smaller pieces to ensure a smooth visual stream
-            const chars = tokenData.text.split("");
-            for (let i = 0; i < chars.length; i += 2) {
-              onToken(chars.slice(i, i + 2).join(""));
-              // 15ms per 2 chars = ~133 chars per second (smooth reading speed)
-              await new Promise((r) => setTimeout(r, 2));
-            }
+            onToken(tokenData.text);
             break;
           }
           case "businesses": {
-            if (onBusinesses && data && (data as any).businesses) {
-              onBusinesses((data as any).businesses);
+            const businessesData = data as SSEBusinessesEvent;
+            if (onBusinesses && businessesData.businesses) {
+              onBusinesses(businessesData.businesses);
+            }
+            break;
+          }
+          case "presentation": {
+            const presentationData = data as SSEPresentationEvent;
+            if (onPresentation && presentationData.presentation) {
+              onPresentation(presentationData.presentation);
             }
             break;
           }
           case "final": {
             const finalData = data as SSEFinalEvent;
-            onFinal(finalData.answer, finalData.businesses);
+            onFinal(
+              finalData.answer,
+              finalData.businesses,
+              finalData.presentation,
+            );
             break;
           }
           case "error": {

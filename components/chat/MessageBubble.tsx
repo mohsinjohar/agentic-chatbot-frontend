@@ -8,16 +8,41 @@
 import type { Message } from "@/lib/types";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { BusinessPresentation } from "./BusinessPresentation";
+import { StreamingText } from "./StreamingText";
 
 interface MessageBubbleProps {
   message: Message;
 }
 
+function normalizeSentence(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function withoutRepeatedIntro(content: string, intro: string) {
+  const normalizedContent = normalizeSentence(content);
+  const normalizedIntro = normalizeSentence(intro);
+  if (!normalizedContent || normalizedIntro.startsWith(normalizedContent)) return "";
+
+  const firstSentence = content.match(/^(.+?[.!?:])(?:\s+|$)/);
+  if (
+    firstSentence &&
+    normalizeSentence(firstSentence[1]) === normalizedIntro
+  ) {
+    return content.slice(firstSentence[0].length).trimStart();
+  }
+  return content;
+}
+
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const closingContent = message.presentation
+    ? withoutRepeatedIntro(message.content, message.presentation.intro)
+    : message.content;
 
   // 1. Show thinking state if assistant is streaming but hasn't received tokens yet
-  const showThinking = !isUser && message.isStreaming && !message.content;
+  const showThinking =
+    !isUser && message.isStreaming && !message.content && !message.presentation;
 
   if (showThinking) {
     return (
@@ -55,7 +80,35 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 Thought for {Math.max(1, Math.round(((message.firstTokenAt || message.completedAt!) - message.timestamp) / 1000))} seconds
               </div>
             )}
-            <MarkdownRenderer content={message.content} businesses={message.businesses} />
+            {message.presentation ? (
+              <>
+                {message.presentation.intro && (
+                  <StreamingText
+                    text={message.presentation.intro}
+                    animate={message.isStreaming}
+                  />
+                )}
+                <BusinessPresentation presentation={message.presentation} />
+                {message.presentation.follow_up && (
+                  <div className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-primary)]">
+                    <StreamingText
+                      text={message.presentation.follow_up}
+                      animate={message.isStreaming}
+                    />
+                  </div>
+                )}
+                {closingContent && (
+                    <div className="mt-3">
+                      <MarkdownRenderer content={closingContent} />
+                    </div>
+                  )}
+              </>
+            ) : (
+              <MarkdownRenderer
+                content={message.content}
+                businesses={message.businesses}
+              />
+            )}
             {message.isStreaming && (
               <span className="animate-pulse ml-1 inline-block w-2 h-4 bg-[var(--color-primary)] rounded-sm mt-1" />
             )}

@@ -1,4 +1,4 @@
-1/* ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    Karobar Online — Type Definitions
    Central type registry. Every data shape lives here.
    ═══════════════════════════════════════════════════════════ */
@@ -6,6 +6,38 @@
 // ── Chat Messages ──────────────────────────────────────────
 
 export type MessageRole = "user" | "assistant";
+export type BusinessPresentationType = "search" | "detail" | "compare";
+
+export interface PresentedBusiness {
+  id: number;
+  full_name?: string | null;
+  business_name?: string | null;
+  mobile_number?: string | null;
+  whatsapp_number?: string | null;
+  slug?: string | null;
+  package_status?: string | null;
+  email?: string | null;
+  business_address?: string | null;
+  city?: string | null;
+  category_id?: number | null;
+  sub_category_id?: number | null;
+  message?: string | null;
+  website_url?: string | null;
+  description: string;
+  match_quality?: "exact" | "related";
+  display_rating: number;
+  display_review_count: number;
+  is_rating_synthetic: boolean;
+  profile_url?: string | null;
+}
+
+export interface BusinessPresentation {
+  kind: "business_presentation";
+  type: BusinessPresentationType;
+  intro: string;
+  follow_up?: string;
+  businesses: PresentedBusiness[];
+}
 
 export interface Message {
   /** Unique identifier for this message */
@@ -23,7 +55,9 @@ export interface Message {
   /** True while the assistant response is still streaming in */
   isStreaming?: boolean;
   /** Array of businesses returned from the backend (if any) */
-  businesses?: any[];
+  businesses?: PresentedBusiness[];
+  /** Validated structured business UI supplied by the backend */
+  presentation?: BusinessPresentation | null;
 }
 
 // ── Chat Sessions (Sidebar "Recent Search") ────────────────
@@ -57,7 +91,19 @@ export interface SSEFinalEvent {
   request_id: string;
   done: boolean;
   answer: string;
-  businesses?: any[];
+  businesses?: PresentedBusiness[];
+  presentation?: BusinessPresentation | null;
+}
+
+export interface SSEPresentationEvent {
+  request_id: string;
+  presentation: BusinessPresentation;
+}
+
+export interface SSEBusinessesEvent {
+  request_id: string;
+  businesses: PresentedBusiness[];
+  business_count: number;
 }
 
 export interface SSEErrorEvent {
