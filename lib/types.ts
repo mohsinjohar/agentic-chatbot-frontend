@@ -130,6 +130,11 @@ export interface UseChatReturn {
   error: string | null;
   sendMessage: (text: string) => Promise<void>;
   clearChat: () => void;
+  /** Increments on each reveal step — drive auto-scroll */
+  revealTick: number;
+  bumpRevealTick: () => void;
+  /** Call when presentation intro→cards→follow_up sequence finishes */
+  completePresentationReveal: (messageId: string) => void;
 }
 
 export interface UseSessionReturn {

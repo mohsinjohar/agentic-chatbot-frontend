@@ -33,6 +33,10 @@ interface ChatAreaProps {
   error: string | null;
   onSendMessage: (text: string) => void;
   onToggleSidebar: () => void;
+  /** Bumps on every char/card reveal so scrollbar follows */
+  revealTick?: number;
+  onRevealProgress?: () => void;
+  onPresentationRevealComplete?: (messageId: string) => void;
 }
 
 export function ChatArea({
@@ -40,13 +44,16 @@ export function ChatArea({
   isStreaming,
   onSendMessage,
   onToggleSidebar,
+  revealTick = 0,
+  onRevealProgress,
+  onPresentationRevealComplete,
 }: ChatAreaProps) {
   const hasMessages = messages.length > 0;
 
-  // Auto-scroll depends on messages content changing (incl. streaming tokens)
+  // Follow content + every reveal tick (presentation cards don't change `content`)
   const lastContent = messages[messages.length - 1]?.content ?? "";
   const { containerRef, handleScroll, scrollToBottom } = useAutoScroll({
-    dependency: lastContent,
+    dependency: `${lastContent}|${revealTick}|${isStreaming}`,
   });
 
   const handleSend = (text: string) => {
@@ -87,7 +94,12 @@ export function ChatArea({
           >
             <div className="max-w-[var(--chat-input-max-width)] mx-auto space-y-4">
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  onRevealProgress={onRevealProgress}
+                  onPresentationRevealComplete={onPresentationRevealComplete}
+                />
               ))}
             </div>
           </div>

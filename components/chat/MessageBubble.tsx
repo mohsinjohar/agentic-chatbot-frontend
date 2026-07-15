@@ -8,11 +8,12 @@
 import type { Message } from "@/lib/types";
 import { StreamingIndicator } from "./StreamingIndicator";
 import { MarkdownRenderer } from "./MarkdownRenderer";
-import { BusinessPresentation } from "./BusinessPresentation";
-import { StreamingText } from "./StreamingText";
+import { PresentationReveal } from "./PresentationReveal";
 
 interface MessageBubbleProps {
   message: Message;
+  onRevealProgress?: () => void;
+  onPresentationRevealComplete?: (messageId: string) => void;
 }
 
 function normalizeSentence(value: string) {
@@ -34,7 +35,11 @@ function withoutRepeatedIntro(content: string, intro: string) {
   return content;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  onRevealProgress,
+  onPresentationRevealComplete,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
   const closingContent = message.presentation
     ? withoutRepeatedIntro(message.content, message.presentation.intro)
@@ -82,26 +87,19 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             )}
             {message.presentation ? (
               <>
-                {message.presentation.intro && (
-                  <StreamingText
-                    text={message.presentation.intro}
-                    animate={message.isStreaming}
-                  />
-                )}
-                <BusinessPresentation presentation={message.presentation} />
-                {message.presentation.follow_up && (
-                  <div className="mt-4 text-[15px] leading-relaxed text-[var(--color-text-primary)]">
-                    <StreamingText
-                      text={message.presentation.follow_up}
-                      animate={message.isStreaming}
-                    />
+                <PresentationReveal
+                  presentation={message.presentation}
+                  animate={!!message.isStreaming}
+                  onProgress={onRevealProgress}
+                  onComplete={() =>
+                    onPresentationRevealComplete?.(message.id)
+                  }
+                />
+                {closingContent && !message.isStreaming && (
+                  <div className="mt-3">
+                    <MarkdownRenderer content={closingContent} />
                   </div>
                 )}
-                {closingContent && (
-                    <div className="mt-3">
-                      <MarkdownRenderer content={closingContent} />
-                    </div>
-                  )}
               </>
             ) : (
               <MarkdownRenderer

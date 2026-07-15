@@ -29,14 +29,14 @@ export function useAutoScroll({ dependency, threshold = 100 }: UseAutoScrollOpti
     shouldAutoScroll.current = distanceFromBottom <= threshold;
   }, [threshold]);
 
-  // Scroll to bottom when dependency changes (if auto-scroll is active)
+  // Instant scroll during rapid content updates (smooth fights token reveal)
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !shouldAutoScroll.current) return;
 
     el.scrollTo({
       top: el.scrollHeight,
-      behavior: "smooth",
+      behavior: "auto",
     });
   }, [dependency]);
 
