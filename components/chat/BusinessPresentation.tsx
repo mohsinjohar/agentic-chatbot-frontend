@@ -31,7 +31,7 @@ function SearchResults({ businesses }: { businesses: PresentedBusiness[] }) {
             <Rating business={business} />
             <ProfileButton business={business} />
           </div>
-          <p className="mb-0 mt-3 max-w-4xl text-[14px] leading-7 text-gray-700 text-justify">
+          <p className="mb-0 mt-3 max-w-4xl text-[15px] leading-7 text-gray-700 text-justify">
             {business.description}
           </p>
         </article>

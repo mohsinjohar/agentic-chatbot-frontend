@@ -114,7 +114,7 @@ export function BusinessCardReveal({
           text={description}
           animate={animate && phase === "description"}
           as="p"
-          className="mb-0 mt-3 max-w-4xl text-[14px] leading-7 text-gray-700 text-justify"
+          className="mb-0 mt-3 max-w-4xl text-[15px] leading-7 text-gray-700 text-justify"
           onProgress={onProgress}
           onComplete={() => {
             if (!animate || phase !== "description") return;
