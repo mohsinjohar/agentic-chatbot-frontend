@@ -60,7 +60,9 @@ export function PresentationReveal({
 
   useEffect(() => {
     if (!animate && !completedRef.current) {
-      finish();
+      // Stop: freeze current progress — do not jump to the full presentation
+      completedRef.current = true;
+      onCompleteRef.current?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animate]);
@@ -124,8 +126,8 @@ export function PresentationReveal({
 
     if (presentation.businesses.length === 0) return null;
 
-    // Fully done / no animation: static presentation
-    if (!animate || phase === "done") {
+    // Intentionally finished (or loaded from history with phase=done): full UI
+    if (phase === "done") {
       return <BusinessPresentation presentation={presentation} />;
     }
 

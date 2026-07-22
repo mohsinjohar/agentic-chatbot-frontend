@@ -98,12 +98,18 @@ export function useStreamReveal({ onDisplay, onCaughtUp }: UseStreamRevealOption
     settleIfReady();
   }, [schedule, settleIfReady]);
 
-  const flush = useCallback(() => {
+  /**
+   * Stop reveal and keep only what is already on screen.
+   * Discards any buffered-but-unrevealed target text.
+   */
+  const stopKeepVisible = useCallback(() => {
     stopTimer();
-    visibleRef.current = targetRef.current.length;
-    onDisplayRef.current(targetRef.current);
-    settleIfReady();
-  }, [stopTimer, settleIfReady]);
+    const visible = targetRef.current.slice(0, visibleRef.current);
+    targetRef.current = visible;
+    settledRef.current = true;
+    doneRef.current = true;
+    return visible;
+  }, [stopTimer]);
 
   useEffect(() => () => stopTimer(), [stopTimer]);
 
@@ -112,10 +118,9 @@ export function useStreamReveal({ onDisplay, onCaughtUp }: UseStreamRevealOption
       append,
       setTarget,
       markDone,
-      flush,
+      stopKeepVisible,
       reset,
-      getTarget: () => targetRef.current,
     }),
-    [append, setTarget, markDone, flush, reset]
+    [append, setTarget, markDone, stopKeepVisible, reset]
   );
 }

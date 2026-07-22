@@ -17,8 +17,16 @@ import type { ChatSession } from "@/lib/types";
 
 export default function Home() {
   const { sessionId, setSessionId } = useSession();
-  const { messages, isStreaming, error, sendMessage, clearChat, revealTick, bumpRevealTick, completePresentationReveal } =
-    useChat(sessionId);
+  const {
+    messages,
+    isStreaming,
+    error,
+    sendMessage,
+    stopStreaming,
+    revealTick,
+    bumpRevealTick,
+    completePresentationReveal,
+  } = useChat(sessionId);
   const { sessions, addSession, updateSession, clearSessions } = useSessions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -100,6 +108,7 @@ export default function Home() {
         isStreaming={isStreaming}
         error={error}
         onSendMessage={handleSendMessage}
+        onStopStreaming={stopStreaming}
         onToggleSidebar={() => setSidebarOpen(true)}
         revealTick={revealTick}
         onRevealProgress={bumpRevealTick}

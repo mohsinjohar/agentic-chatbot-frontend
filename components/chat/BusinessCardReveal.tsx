@@ -55,7 +55,9 @@ export function BusinessCardReveal({
 
   useEffect(() => {
     if (!animate && !completedRef.current) {
-      finish();
+      // Stop: freeze current phase — do not jump to full card
+      completedRef.current = true;
+      onCompleteRef.current?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animate]);
@@ -76,8 +78,7 @@ export function BusinessCardReveal({
   }, [phase, animate, description]);
 
   const showMeta = phase === "meta" || phase === "description" || phase === "done";
-  const showDescription =
-    phase === "description" || phase === "done" || (!animate && !!description);
+  const showDescription = phase === "description" || phase === "done";
 
   return (
     <article className="flex flex-col">
@@ -160,7 +161,11 @@ export function DetailCardReveal({
   };
 
   useEffect(() => {
-    if (!animate && !completedRef.current) finish();
+    if (!animate && !completedRef.current) {
+      // Stop: freeze current phase — do not jump to full detail card
+      completedRef.current = true;
+      onCompleteRef.current?.();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animate]);
 
@@ -174,7 +179,7 @@ export function DetailCardReveal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, animate]);
 
-  const showHeaderMeta = phase !== "title" || !animate;
+  const showHeaderMeta = phase !== "title";
   const showAbout = phase === "about" || phase === "fields" || phase === "done";
   const showFields = phase === "fields" || phase === "done";
 

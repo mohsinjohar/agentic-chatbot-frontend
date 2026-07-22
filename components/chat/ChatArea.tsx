@@ -32,6 +32,7 @@ interface ChatAreaProps {
   isStreaming: boolean;
   error: string | null;
   onSendMessage: (text: string) => void;
+  onStopStreaming?: () => void;
   onToggleSidebar: () => void;
   /** Bumps on every char/card reveal so scrollbar follows */
   revealTick?: number;
@@ -43,6 +44,7 @@ export function ChatArea({
   messages,
   isStreaming,
   onSendMessage,
+  onStopStreaming,
   onToggleSidebar,
   revealTick = 0,
   onRevealProgress,
@@ -106,7 +108,11 @@ export function ChatArea({
 
           {/* Input bar fixed at bottom */}
           <div className="shrink-0 px-4 pb-6 pt-3">
-            <ChatInput onSend={handleSend} disabled={isStreaming} />
+            <ChatInput
+              onSend={handleSend}
+              onStop={onStopStreaming}
+              isStreaming={isStreaming}
+            />
           </div>
         </>
       ) : (
@@ -117,11 +123,14 @@ export function ChatArea({
         <div className="flex-1 flex flex-col items-center justify-center px-6 pb-[12vh]">
           <WelcomeHero />
           <div className="mt-8 w-full max-w-[480px]">
-            <ChatInput onSend={handleSend} disabled={isStreaming} />
+            <ChatInput
+              onSend={handleSend}
+              onStop={onStopStreaming}
+              isStreaming={isStreaming}
+            />
           </div>
         </div>
       )}
     </main>
   );
 }
-

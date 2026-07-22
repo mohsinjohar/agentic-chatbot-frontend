@@ -129,6 +129,8 @@ export interface UseChatReturn {
   isStreaming: boolean;
   error: string | null;
   sendMessage: (text: string) => Promise<void>;
+  /** Abort the in-flight stream and settle UI; keeps partial reply */
+  stopStreaming: () => void;
   clearChat: () => void;
   /** Increments on each reveal step — drive auto-scroll */
   revealTick: number;

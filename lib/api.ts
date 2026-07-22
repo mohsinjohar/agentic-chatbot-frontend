@@ -158,6 +158,9 @@ export async function streamChat({
       const events = parseSSEChunk(complete);
 
       for (const { event, data } of events) {
+        // User stopped — ignore any already-buffered frames
+        if (signal?.aborted) return;
+
         switch (event) {
           case "token": {
             const tokenData = data as SSETokenEvent;

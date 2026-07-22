@@ -18,6 +18,8 @@ interface StreamingTextProps {
 /**
  * Reveals `text` one character at a time.
  * Continues from the current offset when `text` grows — never restarts from 0.
+ * When `animate` flips to false mid-stream, freezes at the current visible length
+ * (does not jump to the full text).
  */
 export function StreamingText({
   text,
@@ -28,19 +30,31 @@ export function StreamingText({
   className = "mb-4 text-gray-700",
   showCursor = true,
 }: StreamingTextProps) {
-  const shouldAnimate = useRef(animate).current;
-  const [visibleLen, setVisibleLen] = useState(shouldAnimate ? 0 : text.length);
-  const visibleLenRef = useRef(shouldAnimate ? 0 : text.length);
-  const completedRef = useRef(!shouldAnimate);
+  const startedAnimated = useRef(animate).current;
+  const [visibleLen, setVisibleLen] = useState(startedAnimated ? 0 : text.length);
+  const visibleLenRef = useRef(startedAnimated ? 0 : text.length);
+  const completedRef = useRef(!startedAnimated);
+  const frozenRef = useRef(false);
   const onProgressRef = useRef(onProgress);
   const onCompleteRef = useRef(onComplete);
   onProgressRef.current = onProgress;
   onCompleteRef.current = onComplete;
 
+  // Stop requested: freeze at current progress, do not expand to full text
   useEffect(() => {
-    if (!shouldAnimate) {
-      visibleLenRef.current = text.length;
-      setVisibleLen(text.length);
+    if (startedAnimated && !animate && !completedRef.current) {
+      frozenRef.current = true;
+      completedRef.current = true;
+      onCompleteRef.current?.();
+    }
+  }, [animate, startedAnimated]);
+
+  useEffect(() => {
+    if (!startedAnimated || frozenRef.current) {
+      if (!startedAnimated) {
+        visibleLenRef.current = text.length;
+        setVisibleLen(text.length);
+      }
       return;
     }
 
@@ -54,6 +68,10 @@ export function StreamingText({
 
     completedRef.current = false;
     const timer = window.setInterval(() => {
+      if (frozenRef.current) {
+        window.clearInterval(timer);
+        return;
+      }
       if (visibleLenRef.current >= text.length) {
         window.clearInterval(timer);
         if (!completedRef.current) {
@@ -68,10 +86,11 @@ export function StreamingText({
     }, MS_PER_CHAR);
 
     return () => window.clearInterval(timer);
-  }, [shouldAnimate, text]);
+  }, [startedAnimated, text, animate]);
 
-  const visibleText = shouldAnimate ? text.slice(0, visibleLen) : text;
-  const streaming = shouldAnimate && visibleLen < text.length;
+  const visibleText = startedAnimated ? text.slice(0, visibleLen) : text;
+  const streaming =
+    startedAnimated && !frozenRef.current && animate && visibleLen < text.length;
 
   return (
     <Tag className={className}>

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    ChatInput — Message Input Bar
-   Pill-shaped input with mic (placeholder) + send button.
+   Pill-shaped input with mic (placeholder) + send/stop button.
    ═══════════════════════════════════════════════════════════ */
 
 "use client";
@@ -31,17 +31,28 @@ function SendIcon() {
   );
 }
 
+function StopIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────
 
 interface ChatInputProps {
   onSend: (text: string) => void;
-  disabled?: boolean;
+  onStop?: () => void;
+  /** When true, primary action is Stop instead of Send */
+  isStreaming?: boolean;
   placeholder?: string;
 }
 
 export function ChatInput({
   onSend,
-  disabled = false,
+  onStop,
+  isStreaming = false,
   placeholder = "Ask anything",
 }: ChatInputProps) {
   const [value, setValue] = useState("");
@@ -49,21 +60,28 @@ export function ChatInput({
 
   const handleSubmit = (e?: FormEvent) => {
     e?.preventDefault();
+    if (isStreaming) return;
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed) return;
     onSend(trimmed);
     setValue("");
+    inputRef.current?.focus();
+  };
+
+  const handleStop = () => {
+    if (!isStreaming) return;
+    onStop?.();
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isStreaming) handleSubmit();
     }
   };
 
-  const canSend = value.trim().length > 0 && !disabled;
+  const canSend = value.trim().length > 0 && !isStreaming;
 
   return (
     <form
@@ -82,7 +100,6 @@ export function ChatInput({
           transition-all duration-[var(--transition-base)]
         "
       >
-        {/* Text Input */}
         <input
           ref={inputRef}
           type="text"
@@ -90,19 +107,16 @@ export function ChatInput({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled}
           maxLength={UI.MESSAGE_MAX_LENGTH}
           autoComplete="off"
           className="
             flex-1 bg-transparent outline-none
             text-sm text-[var(--color-text-primary)]
             placeholder:text-[var(--color-text-muted)]
-            disabled:cursor-not-allowed
           "
           id="chat-input"
         />
 
-        {/* Mic Button — visual placeholder */}
         <IconButton
           icon={<MicIcon />}
           ariaLabel="Voice input (coming soon)"
@@ -111,15 +125,24 @@ export function ChatInput({
           disabled
         />
 
-        {/* Send Button */}
-        <IconButton
-          icon={<SendIcon />}
-          ariaLabel="Send message"
-          variant="primary"
-          size="md"
-          disabled={!canSend}
-          onClick={() => handleSubmit()}
-        />
+        {isStreaming ? (
+          <IconButton
+            icon={<StopIcon />}
+            ariaLabel="Stop generating"
+            variant="primary"
+            size="md"
+            onClick={handleStop}
+          />
+        ) : (
+          <IconButton
+            icon={<SendIcon />}
+            ariaLabel="Send message"
+            variant="primary"
+            size="md"
+            disabled={!canSend}
+            onClick={() => handleSubmit()}
+          />
+        )}
       </div>
     </form>
   );

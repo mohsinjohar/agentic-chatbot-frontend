@@ -32,6 +32,10 @@ export function useChat(sessionId: string): UseChatReturn {
   /** True when UI must finish presentation sequence before ending stream */
   const awaitingPresentationRevealRef = useRef(false);
   const textRevealDoneRef = useRef(false);
+  /** True after user hits Stop — ignore late SSE callbacks */
+  const stoppedRef = useRef(false);
+  /** Prevents settleAfterAbort running twice for the same assistant message */
+  const settledAbortIdRef = useRef<string | null>(null);
 
   const bumpRevealTick = useCallback(() => {
     setRevealTick((n) => n + 1);
@@ -107,6 +111,78 @@ export function useChat(sessionId: string): UseChatReturn {
     [bumpRevealTick, tryFinishStream]
   );
 
+  /**
+   * Settle UI after an abort — keep only what was already visible,
+   * discard buffered-but-unrevealed text. Idempotent per assistantId.
+   */
+  const settleAfterAbort = useCallback(
+    (assistantId: string) => {
+      if (settledAbortIdRef.current === assistantId) return;
+      settledAbortIdRef.current = assistantId;
+      stoppedRef.current = true;
+
+      // Keep on-screen text only — do NOT flush the full network buffer
+      const visible = reveal.stopKeepVisible();
+      reveal.reset();
+      awaitingPresentationRevealRef.current = false;
+      textRevealDoneRef.current = false;
+      firstTokenMarkedRef.current = false;
+
+      if (assistantIdRef.current === assistantId) {
+        assistantIdRef.current = null;
+      }
+
+      setMessages((prev) => {
+        const current = prev.find((m) => m.id === assistantId);
+        // Prefer frozen visible reveal; fall back to whatever UI already showed
+        const content = visible || current?.content || "";
+        const hasPayload =
+          !!content ||
+          !!current?.presentation ||
+          (current?.businesses?.length ?? 0) > 0;
+
+        // Nothing received yet — drop the empty assistant shell
+        if (!hasPayload) {
+          return prev.filter((m) => m.id !== assistantId);
+        }
+
+        return prev.map((m) =>
+          m.id === assistantId
+            ? {
+                ...m,
+                content,
+                isStreaming: false,
+                completedAt: m.completedAt ?? Date.now(),
+              }
+            : m
+        );
+      });
+      setIsStreaming(false);
+    },
+    [reveal]
+  );
+
+  const stopStreaming = useCallback(() => {
+    const assistantId = assistantIdRef.current;
+    const controller = abortRef.current;
+    if (!controller && !assistantId) return;
+
+    // Gate callbacks before abort so late SSE frames are ignored
+    stoppedRef.current = true;
+    controller?.abort();
+    abortRef.current = null;
+
+    if (assistantId) {
+      settleAfterAbort(assistantId);
+    } else {
+      reveal.reset();
+      awaitingPresentationRevealRef.current = false;
+      textRevealDoneRef.current = false;
+      firstTokenMarkedRef.current = false;
+      setIsStreaming(false);
+    }
+  }, [reveal, settleAfterAbort]);
+
   // Load messages from localStorage when sessionId changes
   useEffect(() => {
     if (!sessionId) return;
@@ -159,6 +235,8 @@ export function useChat(sessionId: string): UseChatReturn {
       abortRef.current = controller;
 
       reveal.reset();
+      stoppedRef.current = false;
+      settledAbortIdRef.current = null;
       firstTokenMarkedRef.current = false;
       awaitingPresentationRevealRef.current = false;
       textRevealDoneRef.current = false;
@@ -192,10 +270,12 @@ export function useChat(sessionId: string): UseChatReturn {
           signal: controller.signal,
 
           onToken: (tokenText) => {
+            if (stoppedRef.current) return;
             reveal.append(tokenText);
           },
 
           onBusinesses: (businesses) => {
+            if (stoppedRef.current) return;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId ? { ...m, businesses } : m
@@ -205,6 +285,7 @@ export function useChat(sessionId: string): UseChatReturn {
           },
 
           onPresentation: (presentation) => {
+            if (stoppedRef.current) return;
             awaitingPresentationRevealRef.current = true;
             setMessages((prev) =>
               prev.map((m) =>
@@ -226,6 +307,8 @@ export function useChat(sessionId: string): UseChatReturn {
           },
 
           onFinal: (answer, businesses, presentation) => {
+            if (stoppedRef.current) return;
+
             // Prefer final answer when present; otherwise keep streamed target
             if (answer) {
               reveal.setTarget(answer);
@@ -258,6 +341,8 @@ export function useChat(sessionId: string): UseChatReturn {
           },
 
           onError: (err) => {
+            if (stoppedRef.current) return;
+
             const errorMessage =
               "message" in err ? err.message : "Something went wrong.";
 
@@ -284,17 +369,11 @@ export function useChat(sessionId: string): UseChatReturn {
         });
 
         if (controller.signal.aborted) {
-          reveal.reset();
-          assistantIdRef.current = null;
-          awaitingPresentationRevealRef.current = false;
-          textRevealDoneRef.current = false;
+          settleAfterAbort(assistantId);
         }
       } catch {
         if (controller.signal.aborted) {
-          reveal.reset();
-          assistantIdRef.current = null;
-          awaitingPresentationRevealRef.current = false;
-          textRevealDoneRef.current = false;
+          settleAfterAbort(assistantId);
           return;
         }
         reveal.reset();
@@ -310,15 +389,19 @@ export function useChat(sessionId: string): UseChatReturn {
         );
       }
     },
-    [sessionId, isStreaming, reveal, bumpRevealTick]
+    [sessionId, isStreaming, reveal, bumpRevealTick, settleAfterAbort]
   );
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort();
+    abortRef.current = null;
     reveal.reset();
     assistantIdRef.current = null;
     awaitingPresentationRevealRef.current = false;
     textRevealDoneRef.current = false;
+    firstTokenMarkedRef.current = false;
+    stoppedRef.current = false;
+    settledAbortIdRef.current = null;
     setMessages([]);
     setIsStreaming(false);
     setError(null);
@@ -329,6 +412,7 @@ export function useChat(sessionId: string): UseChatReturn {
     isStreaming,
     error,
     sendMessage,
+    stopStreaming,
     clearChat,
     revealTick,
     bumpRevealTick,
